@@ -16,7 +16,6 @@ class GorkClient(discord.Client):
         self.tree = discord.app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        # Registra comandos slash
         self.tree.add_command(ping)
         self.tree.add_command(coinflip)
         await self.tree.sync()
@@ -37,6 +36,11 @@ class GorkClient(discord.Client):
             await message.channel.send("owo")
             return
 
+        # ✅ Si un usuario específico menciona al bot
+        if self.user in message.mentions and message.author.id == 852636435677052978:
+            await message.channel.send("Ponte a jugar P4G")
+            return
+
         # Detectar palabra "balatro"
         if re.search(r'\bbalatro\b', message.content, re.IGNORECASE):
             imagenes_balatro = [
@@ -55,20 +59,14 @@ class GorkClient(discord.Client):
             return
 
         if self.user in message.mentions and "is this true?" in message.content.lower():
-            responses = [
-                "Absolutamente.",
-                "Ni hablar.",
-                "Quizá"
-            ]
+            responses = ["Absolutamente.", "Ni hablar.", "Quizá"]
             await message.channel.send(random.choice(responses))
 
         elif self.user in message.mentions and ("grúñeme" in message.content.lower() or "gruñeme" in message.content.lower()):
-            responses = ["Rawr x3"]
-            await message.channel.send(random.choice(responses))
+            await message.channel.send("Rawr x3")
 
         elif self.user in message.mentions and ("diselo" in message.content.lower() or "díselo" in message.content.lower()):
-            responses = ["Que te importa"]
-            await message.channel.send(random.choice(responses))
+            await message.channel.send("Que te importa")
 
     async def send_random_message(self):
         await self.wait_until_ready()
@@ -85,9 +83,8 @@ class GorkClient(discord.Client):
 
         while not self.is_closed():
             await asyncio.sleep(600)
-            if random.random() < 0.02:
-                if channel:
-                    await channel.send(random.choice(mensajes_random))
+            if random.random() < 0.02 and channel:
+                await channel.send(random.choice(mensajes_random))
 
 
 @discord.app_commands.command(name="ping", description="Responde con Pong!")
@@ -99,7 +96,5 @@ async def coinflip(interaction: discord.Interaction):
     resultado = random.choice(["Cara", "Cruz"])
     await interaction.response.send_message(f"🪙 ¡Salió **{resultado}**!")
 
-# Instancia del bot
 client = GorkClient(intents=intents)
-
 client.run(os.getenv("DISCORD_TOKEN"))
