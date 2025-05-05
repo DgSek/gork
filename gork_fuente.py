@@ -54,6 +54,8 @@ class GorkClient(discord.Client):
                 "https://media.discordapp.net/attachments/1368383731731009636/1368385200458825798/20250504_023108.jpg?ex=68180787&is=6816b607&hm=6178e90e83a598faa5f449c03891d41adafc64fff84e04004be8746af12f530f&=&format=webp&width=831&height=826",
                 "https://media.discordapp.net/attachments/1368383731731009636/1368385556257570876/Screenshot_20250504_023349_Gallery.jpg?ex=681807db&is=6816b65b&hm=e923ba8e04708c72bc1da055d517839810fbe38eec8bda27f53c8d0379b609cb&=&format=webp&width=813&height=826",
                 "https://media.discordapp.net/attachments/1368383731731009636/1368385583126151178/Screenshot_20250504_023414_Gallery.jpg?ex=681807e2&is=6816b662&hm=2ac27e3db96d10517b543d547dcd588137aaf3b93534285ae84805cf8bb22f03&=&format=webp&width=842&height=826",
+                "https://media.discordapp.net/attachments/1368383731731009636/1369011421186363422/9mo488.png?ex=681a4ebd&is=6818fd3d&hm=3a9d278ba8f436af5ed433f907ce0249ee4b825f4530adafd2f050b4841f4a8e&=&format=webp&quality=lossless",
+                "https://media.discordapp.net/attachments/1368383731731009636/1369012509813641426/facebook_1746458761888_7325178970824882627.png?ex=681a4fc1&is=6818fe41&hm=c7397e3026deac2ba53197bf36da2c7c780f2b258584cb970e6b96d6a4a34e8f&=&format=webp&quality=lossless",
             ]
             await message.channel.send(random.choice(imagenes_balatro))
             return
