@@ -29,6 +29,12 @@ class GorkClient(discord.Client):
             return
 
         content = message.content.strip().lower()
+
+        # 🆕 Responder "so" si el mensaje es "que", "qué" o termina en eso
+        if re.fullmatch(r"(que|qué)", content) or re.search(r"\b(que|qué)[\s\?\.!\)]*$", message.content, re.IGNORECASE):
+            await message.channel.send("so")
+            return
+
         if content == "owo":
             await message.channel.send("uwu")
             return
@@ -72,14 +78,14 @@ class GorkClient(discord.Client):
             await message.channel.send(f"pene de {target}:\n{penis_str}")
             return
 
-        if self.user in message.mentions and "is this true?" in message.content.lower():
+        if self.user in message.mentions and "is this true?" in content:
             responses = ["Absolutamente.", "Ni hablar.", "Quizá"]
             await message.channel.send(random.choice(responses))
 
-        elif self.user in message.mentions and ("grúñeme" in message.content.lower() or "gruñeme" in message.content.lower()):
+        elif self.user in message.mentions and ("grúñeme" in content or "gruñeme" in content):
             await message.channel.send("Rawr x3")
 
-        elif self.user in message.mentions and ("diselo" in message.content.lower() or "díselo" in message.content.lower()):
+        elif self.user in message.mentions and ("diselo" in content or "díselo" in content):
             await message.channel.send("Que te importa")
 
     async def send_random_message(self):
