@@ -59,6 +59,14 @@ class GorkClient(discord.Client):
             ]
             await message.channel.send(random.choice(imagenes_balatro))
             return
+        
+        if message.content.lower().strip() == "pls penis":
+            length = random.randint(0, 15)  # Puedes ajustar el máximo si deseas
+            penis_str = "8" + "=" * length + "D"
+            username = message.author.display_name
+            await message.channel.send(f"pene de {username}:\n{penis_str}")
+            return
+
 
         if self.user in message.mentions and "is this true?" in message.content.lower():
             responses = ["Absolutamente.", "Ni hablar.", "Quizá"]
