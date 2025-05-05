@@ -59,14 +59,18 @@ class GorkClient(discord.Client):
             ]
             await message.channel.send(random.choice(imagenes_balatro))
             return
-        
-        if message.content.lower().strip() == "pls penis":
-            length = random.randint(0, 15)  # Puedes ajustar el máximo si deseas
-            penis_str = "8" + "=" * length + "D"
-            username = message.author.display_name
-            await message.channel.send(f"pene de {username}:\n{penis_str}")
-            return
 
+        # ✅ Comando "pls penis" con opción de mencionar a otro usuario
+        if content.startswith("pls penis"):
+            if message.mentions:
+                target = message.mentions[0].display_name
+            else:
+                target = message.author.display_name
+
+            length = random.randint(0, 15)
+            penis_str = "8" + "=" * length + "D"
+            await message.channel.send(f"pene de {target}:\n{penis_str}")
+            return
 
         if self.user in message.mentions and "is this true?" in message.content.lower():
             responses = ["Absolutamente.", "Ni hablar.", "Quizá"]
