@@ -30,8 +30,8 @@ class GorkClient(discord.Client):
 
         content = message.content.strip().lower()
 
-        # 🆕 Responder "so" si el mensaje es o termina en "que", "qué", o "pq"
-        if re.fullmatch(r"(que|qué|pq)", content) or re.search(r"\b(que|qué|pq)[\s\?\.!\)]*$", message.content, re.IGNORECASE):
+        # 🆕 Responder "so" si el mensaje es o termina en "que", "qué", "pq" o "q"
+        if re.fullmatch(r"(que|qué|pq|q)", content) or re.search(r"\b(que|qué|pq|q)[\s\?\.!\)]*$", message.content, re.IGNORECASE):
             await message.channel.send("so")
             return
 
