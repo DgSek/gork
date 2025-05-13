@@ -1,7 +1,7 @@
 import discord
 import random
 import asyncio
-import re  # Para expresiones regulares
+import re
 import os
 from dotenv import load_dotenv
 
@@ -30,7 +30,7 @@ class GorkClient(discord.Client):
 
         content = message.content.strip().lower()
 
-        # 🆕 Responder "so" si el mensaje es o termina en "que", "qué", "pq" o "q"
+        # Comandos de texto simples
         if re.fullmatch(r"(que|qué|pq|q)", content) or re.search(r"\b(que|qué|pq|q)[\s\?\.!\)]*$", message.content, re.IGNORECASE):
             await message.channel.send("so")
             return
@@ -42,12 +42,26 @@ class GorkClient(discord.Client):
             await message.channel.send("owo")
             return
 
-        # ✅ Si un usuario específico menciona al bot
-        if self.user in message.mentions and message.author.id == 852636435677052978:
-            await message.channel.send("Ponte a jugar P4G")
-            return
+        if self.user in message.mentions:
+            #si es el usuario específico (Kezo)
+            if message.author.id == 852636435677052978 and random.randint(1, 20) == 1:
+                await message.channel.send("Ponte a jugar P4G")
+                return
 
-        # Detectar palabra "balatro"
+            #menciones con comandos
+            if "is this true?" in content:
+                responses = ["Absolutamente.", "Ni hablar.", "Quizá"]
+                await message.channel.send(random.choice(responses))
+                return
+
+            if "grúñeme" in content or "gruñeme" in content:
+                await message.channel.send("Rawr x3")
+                return
+
+            if "diselo" in content or "díselo" in content:
+                await message.channel.send("Que te importa")
+                return
+
         if re.search(r'\bbalatro\b', message.content, re.IGNORECASE):
             imagenes_balatro = [
                 "https://media.discordapp.net/attachments/1368383731731009636/1368383799347511397/20250503_100614.jpg?ex=68180639&is=6816b4b9&hm=cfd18f47d067a49f1294e752ee1258554cc2387cccee28987148695aa87c2871&=&format=webp",
@@ -62,11 +76,11 @@ class GorkClient(discord.Client):
                 "https://media.discordapp.net/attachments/1368383731731009636/1368385583126151178/Screenshot_20250504_023414_Gallery.jpg?ex=681807e2&is=6816b662&hm=2ac27e3db96d10517b543d547dcd588137aaf3b93534285ae84805cf8bb22f03&=&format=webp&width=842&height=826",
                 "https://media.discordapp.net/attachments/1368383731731009636/1369011421186363422/9mo488.png?ex=681a4ebd&is=6818fd3d&hm=3a9d278ba8f436af5ed433f907ce0249ee4b825f4530adafd2f050b4841f4a8e&=&format=webp&quality=lossless",
                 "https://media.discordapp.net/attachments/1368383731731009636/1369012509813641426/facebook_1746458761888_7325178970824882627.png?ex=681a4fc1&is=6818fe41&hm=c7397e3026deac2ba53197bf36da2c7c780f2b258584cb970e6b96d6a4a34e8f&=&format=webp&quality=lossless",
+                "https://media.discordapp.net/attachments/1368383731731009636/1369045626582601728/ZTc1OTIw.png?ex=681a6e99&is=68191d19&hm=a7f7b8f28477bba1222223f792af9bd62060a727e4b5921d746290645ccb4984&=&format=webp&quality=lossless",
             ]
             await message.channel.send(random.choice(imagenes_balatro))
             return
 
-        # ✅ Comando "pls penis" con opción de mencionar a otro usuario
         if content.startswith("pls penis"):
             if message.mentions:
                 target = message.mentions[0].display_name
@@ -77,16 +91,6 @@ class GorkClient(discord.Client):
             penis_str = "8" + "=" * length + "D"
             await message.channel.send(f"pene de {target}:\n{penis_str}")
             return
-
-        if self.user in message.mentions and "is this true?" in content:
-            responses = ["Absolutamente.", "Ni hablar.", "Quizá"]
-            await message.channel.send(random.choice(responses))
-
-        elif self.user in message.mentions and ("grúñeme" in content or "gruñeme" in content):
-            await message.channel.send("Rawr x3")
-
-        elif self.user in message.mentions and ("diselo" in content or "díselo" in content):
-            await message.channel.send("Que te importa")
 
     async def send_random_message(self):
         await self.wait_until_ready()
