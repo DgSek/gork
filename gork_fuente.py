@@ -61,6 +61,10 @@ class GorkClient(discord.Client):
             if "diselo" in content or "díselo" in content:
                 await message.channel.send("Que te importa")
                 return
+            if "un repo?" in content:
+                responses = ["Cállate"]
+                await message.channel.send(random.choice(responses))
+                return
 
         if re.search(r'\bbalatro\b', message.content, re.IGNORECASE):
             imagenes_balatro = [
@@ -77,6 +81,10 @@ class GorkClient(discord.Client):
                 "https://media.discordapp.net/attachments/1368383731731009636/1369011421186363422/9mo488.png?ex=681a4ebd&is=6818fd3d&hm=3a9d278ba8f436af5ed433f907ce0249ee4b825f4530adafd2f050b4841f4a8e&=&format=webp&quality=lossless",
                 "https://media.discordapp.net/attachments/1368383731731009636/1369012509813641426/facebook_1746458761888_7325178970824882627.png?ex=681a4fc1&is=6818fe41&hm=c7397e3026deac2ba53197bf36da2c7c780f2b258584cb970e6b96d6a4a34e8f&=&format=webp&quality=lossless",
                 "https://media.discordapp.net/attachments/1368383731731009636/1369045626582601728/ZTc1OTIw.png?ex=681a6e99&is=68191d19&hm=a7f7b8f28477bba1222223f792af9bd62060a727e4b5921d746290645ccb4984&=&format=webp&quality=lossless",
+                "https://media.discordapp.net/attachments/1368383731731009636/1373467789464961124/GrJ-_ZUWUAAF7TS.png?ex=682a850e&is=6829338e&hm=440d622438bd6c72dc8862334365419fa0324a4738c27a7a2e6152be54a4c655&=&format=webp&quality=lossless",
+                "https://media.discordapp.net/attachments/1368383731731009636/1373467828975566868/GrKLckuW8AAthAK.png?ex=682a8518&is=68293398&hm=b946ea9a7d7cd3cdd9238911db5fcefa37f0d4005edd261d5d3bba10c367fa5e&=&format=webp&quality=lossless",
+                "https://media.discordapp.net/attachments/1368383731731009636/1373467879122407474/GrKXXbJWAAAJwzj.png?ex=682a8524&is=682933a4&hm=4a471afe607eca54b139e034d245bc1169b5c087a02bb10bb11f631dbb6771ea&=&format=webp&quality=lossless",
+                "https://media.discordapp.net/attachments/1368383731731009636/1373467953260925080/498281336_4066399776977681_3756171527715474276_n.png?ex=682a8535&is=682933b5&hm=754e803e5a84ae0aac431d57feab04904e8af347176978ecb53d116b18afcca7&=&format=webp&quality=lossless&width=1012&height=826",
             ]
             await message.channel.send(random.choice(imagenes_balatro))
             return
