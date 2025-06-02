@@ -28,15 +28,6 @@ class GorkClient(discord.Client):
         if message.author.bot:
             return
 
-        # MENSAJE PERSONALIZADO PARA USUARIO ESPECÍFICO
-        if message.author.id == 223671675508621312:
-            if isinstance(message.author, discord.Member):
-                nombre_usuario = message.author.display_name
-            else:
-                nombre_usuario = message.author.name
-            await message.channel.send(f"vete a la verga {nombre_usuario}")
-            return
-
         content = message.content.strip().lower()
 
         # Comandos de texto simples
