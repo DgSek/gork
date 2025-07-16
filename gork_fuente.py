@@ -88,6 +88,12 @@ class GorkClient(discord.Client):
             ]
             await message.channel.send(random.choice(imagenes_balatro))
             return
+        if content.startswith("argentino" or "Argentino"):
+            imagen_argentino = [
+                "https://media.discordapp.net/attachments/1368383731731009636/1394860064480821248/image.png?ex=6878582a&is=687706aa&hm=672270cd443e065d4e72a59689268826a3515bb3dd257b24e3fe1fdab277eaa6&=&format=webp&quality=lossless&width=833&height=826"
+            ]
+            await message.channel.send(random.choice(imagenes_balatro))
+            return
 
         if content.startswith("pls penis"):
             if message.mentions:
