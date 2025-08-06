@@ -31,10 +31,14 @@ class GorkClient(discord.Client):
         content = message.content.strip().lower()
 
         # Comandos de texto simples
-        if re.fullmatch(r"(que|qué|pq|q)", content) or re.search(r"\b(que|qué|pq|q)[\s\?\.!\)]*$", message.content, re.IGNORECASE):
+        if re.fullmatch(r"(q(u|ú)(e|é)+|pq|q+)", content, re.IGNORECASE):
             await message.channel.send("so")
             return
-
+        
+        if re.fullmatch(r"k(h)?(e|é)?", content, re.IGNORECASE):
+             await message.channel.send("zo")
+             return
+        
         if content == "owo":
             await message.channel.send("uwu")
             return
@@ -116,7 +120,8 @@ class GorkClient(discord.Client):
             "chupala zau",
             "chupala walter",
             "el lucas es puto",
-            "tu culo"
+            "tu culo",
+            "he comprao leche xD"
         ]
 
         while not self.is_closed():
