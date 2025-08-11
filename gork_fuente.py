@@ -31,9 +31,12 @@ class GorkClient(discord.Client):
         content = message.content.strip().lower()
 
         # Comandos de texto simples
-        if re.fullmatch(r"(q(u|ú)(e|é)+|pq|q+)", content, re.IGNORECASE):
-            await message.channel.send("so")
-            return
+        # Comandos de texto simples
+        if re.fullmatch(r"(q(u|ú)(e|é)+|pq|q+)", content, re.IGNORECASE) \
+            or re.search(r"(q(u|ú)(e|é)+)\s*[\?\¿]?$", content, re.IGNORECASE):
+                await message.channel.send("so")
+                return
+
         
         if re.fullmatch(r"k(h)?(e|é)?", content, re.IGNORECASE):
              await message.channel.send("zo")
