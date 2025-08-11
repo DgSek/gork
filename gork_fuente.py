@@ -4,12 +4,19 @@ import asyncio
 import re
 import os
 from dotenv import load_dotenv
+from rule34Py import rule34Py  # Librería para acceder a rule34
 
 load_dotenv()
 
 intents = discord.Intents.default()
 intents.message_content = True
 
+# Cliente de Rule34
+r34 = rule34Py()
+
+# ==========================
+# Cliente del bot
+# ==========================
 class GorkClient(discord.Client):
     def __init__(self, *, intents):
         super().__init__(intents=intents)
@@ -30,18 +37,144 @@ class GorkClient(discord.Client):
 
         content = message.content.strip().lower()
 
-        # Comandos de texto simples
-        # Comandos de texto simples
+        # ==========================
+        # Comando ¿r34 <busqueda> (hasta 100 imágenes)
+        # ==========================
+        if content.startswith("¿r34 "):
+            if not isinstance(message.channel, discord.TextChannel) or not message.channel.is_nsfw():
+                return  # Solo funciona en canales NSFW
+
+            query = content.split(" ", 1)[1]
+            tags = query.split() + ["-ai_generated", "-ai", "-ai_art"]
+
+            try:
+                # Buscar hasta 100 imágenes (5 páginas de 20)
+                results = []
+                for page in range(1, 6):
+                    page_results = r34.search(tags, page_id=page, limit=20)
+                    if not page_results:
+                        break
+                    results.extend(page_results)
+
+                if not results:
+                    await message.channel.send("No encontré resultados.")
+                    return
+
+                # Función para obtener URL de la imagen
+                def get_image_url(post):
+                    for attr in ["fileUrl", "file_url", "sample_url", "image", "preview_url"]:
+                        url = getattr(post, attr, None)
+                        if url:
+                            return url
+                    return None
+
+                # Función para obtener URL del post
+                def get_post_url(post):
+                    for attr in ["url", "post_url", "postUrl", "source"]:
+                        url = getattr(post, attr, None)
+                        if url:
+                            return url
+                    return None
+
+                # ==========================
+                # Vista con botones para carrusel de imágenes
+                # ==========================
+                class R34View(discord.ui.View):
+                    def __init__(self, posts):
+                        super().__init__(timeout=300)  # Expira en 5 minutos
+                        self.posts = posts
+                        self.index = 0
+
+                    def current_embed(self):
+                        post = self.posts[self.index]
+                        image_url = get_image_url(post)
+                        post_url = get_post_url(post) or "https://rule34.xxx/"
+
+                        embed = discord.Embed(
+                            title=f"Resultado {self.index + 1}/{len(self.posts)}",
+                            url=post_url,
+                            description=f"**Tags:** {', '.join(post.tags[:10])}..."
+                        )
+                        if image_url:
+                            embed.set_image(url=image_url)
+                        else:
+                            embed.description += "\n(No se encontró imagen disponible)"
+
+                        return embed
+
+                    async def update_message(self, interaction: discord.Interaction):
+                        await interaction.response.edit_message(embed=self.current_embed(), view=self)
+
+                    @discord.ui.button(label="⬅️", style=discord.ButtonStyle.secondary)
+                    async def left(self, interaction: discord.Interaction, button: discord.ui.Button):
+                        self.index = (self.index - 1) % len(self.posts)
+                        await self.update_message(interaction)
+
+                    @discord.ui.button(label="🎲", style=discord.ButtonStyle.primary)
+                    async def random_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+                        new_index = self.index
+                        while new_index == self.index and len(self.posts) > 1:
+                            new_index = random.randint(0, len(self.posts) - 1)
+                        self.index = new_index
+                        await self.update_message(interaction)
+
+                    @discord.ui.button(label="➡️", style=discord.ButtonStyle.secondary)
+                    async def right(self, interaction: discord.Interaction, button: discord.ui.Button):
+                        self.index = (self.index + 1) % len(self.posts)
+                        await self.update_message(interaction)
+
+                    @discord.ui.button(label="❌", style=discord.ButtonStyle.danger)
+                    async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
+                        # Solo permitir que el autor del mensaje o el que invocó el comando cierre el mensaje:
+                        # Como esta info no la tenemos, permitiremos que cualquiera borre el mensaje (puedes cambiar esto)
+                        await interaction.message.delete()
+
+                view = R34View(results)
+                await message.channel.send(embed=view.current_embed(), view=view)
+
+            except Exception as e:
+                print(f"Error en búsqueda rule34: {e}")
+                await message.channel.send("Hubo un error en la búsqueda.")
+            return
+
+        # ==========================
+        # Comando chistoso "teto porno"
+        # ==========================
+        if content == "teto porno" and isinstance(message.channel, discord.TextChannel) and message.channel.is_nsfw():
+            try:
+                results = r34.search(["kasane_teto", "-ai_generated", "-ai", "-ai_art"], page_id=1, limit=100)
+                if results:
+                    post = random.choice(results)
+                    # Intentar obtener url correcta (igual que antes)
+                    def get_image_url(post):
+                        for attr in ["fileUrl", "file_url", "sample_url", "image", "preview_url"]:
+                            url = getattr(post, attr, None)
+                            if url:
+                                return url
+                        return None
+                    image_url = get_image_url(post)
+                    if image_url:
+                        await message.channel.send(image_url)
+                    else:
+                        await message.channel.send("No se encontró imagen disponible.")
+                else:
+                    await message.channel.send("No encontré nada de Teto.")
+            except Exception as e:
+                print(f"Error al buscar en rule34: {e}")
+            return
+
+        # ==========================
+        # Respuestas de texto simples
+        # ==========================
         if re.fullmatch(r"(q(u|ú)(e|é)+|pq|q+)", content, re.IGNORECASE) \
             or re.search(r"(q(u|ú)(e|é)+)\s*[\?\¿]?$", content, re.IGNORECASE):
                 await message.channel.send("so")
                 return
 
-        
         if re.fullmatch(r"k(h)?(e|é)?", content, re.IGNORECASE):
-             await message.channel.send("zo")
-             return
-        
+            await message.channel.send("zo")
+            return
+
         if content == "owo":
             await message.channel.send("uwu")
             return
@@ -50,12 +183,10 @@ class GorkClient(discord.Client):
             return
 
         if self.user in message.mentions:
-            #si es el usuario específico (Kezo)
             if message.author.id == 852636435677052978 and random.randint(1, 20) == 1:
                 await message.channel.send("Ponte a jugar P4G")
                 return
 
-            #menciones con comandos
             if "is this true?" in content:
                 responses = ["Absolutamente.", "Ni hablar.", "Quizá"]
                 await message.channel.send(random.choice(responses))
@@ -68,6 +199,7 @@ class GorkClient(discord.Client):
             if "diselo" in content or "díselo" in content:
                 await message.channel.send("Que te importa")
                 return
+
             if "un repo?" in content:
                 responses = ["Cállate"]
                 await message.channel.send(random.choice(responses))
@@ -77,25 +209,11 @@ class GorkClient(discord.Client):
             imagenes_balatro = [
                 "https://media.discordapp.net/attachments/1368383731731009636/1368383799347511397/20250503_100614.jpg?ex=68180639&is=6816b4b9&hm=cfd18f47d067a49f1294e752ee1258554cc2387cccee28987148695aa87c2871&=&format=webp",
                 "https://media.discordapp.net/attachments/1368383731731009636/1368383817462845560/20250503_100606.jpg?ex=6818063d&is=6816b4bd&hm=6d7473660a1ac5037a5de817a85299def143a6e5a51f8e0159eb84b48da74d40&=&format=webp",
-                "https://media.discordapp.net/attachments/1368383731731009636/1368383828162515006/20250503_100719.jpg?ex=6818063f&is=6816b4bf&hm=bc9ccb0cb645ecb18186b7a9c953c96313e15d3ee14597eac6d0f1b609050f20&=&format=webp&width=1245&height=722",
-                "https://media.discordapp.net/attachments/1368383731731009636/1368385117449490553/20250504_022609.jpg?ex=68180773&is=6816b5f3&hm=fa2952751f31d96e0d193b797d2c048b6a1b2ca6470d6c5cab63c6339df96b13&=&format=webp&width=849&height=826",
-                "https://media.discordapp.net/attachments/1368383731731009636/1368385131030646904/Screenshot_20250504_022628_Gallery.jpg?ex=68180776&is=6816b5f6&hm=3266df02d284f5d1aa751bd28d057bb5d27f29b2b6251e100698d262d0609828&=&format=webp&width=818&height=826",
-                "https://media.discordapp.net/attachments/1368383731731009636/1368385142271250493/20250504_022014.jpg?ex=68180779&is=6816b5f9&hm=16a7dbf66300831cdfce318423252f7589360ab232bc68f7f98d5aac2b6f467f&=&format=webp&width=1330&height=722",
-                "https://media.discordapp.net/attachments/1368383731731009636/1368385151582863460/20250504_023038.jpg?ex=6818077b&is=6816b5fb&hm=90477e2f2398a0f0a047d5bf8b0087cc2909226ecd0d5d114b65251ed1752d25&=&format=webp&width=1230&height=722",
-                "https://media.discordapp.net/attachments/1368383731731009636/1368385200458825798/20250504_023108.jpg?ex=68180787&is=6816b607&hm=6178e90e83a598faa5f449c03891d41adafc64fff84e04004be8746af12f530f&=&format=webp&width=831&height=826",
-                "https://media.discordapp.net/attachments/1368383731731009636/1368385556257570876/Screenshot_20250504_023349_Gallery.jpg?ex=681807db&is=6816b65b&hm=e923ba8e04708c72bc1da055d517839810fbe38eec8bda27f53c8d0379b609cb&=&format=webp&width=813&height=826",
-                "https://media.discordapp.net/attachments/1368383731731009636/1368385583126151178/Screenshot_20250504_023414_Gallery.jpg?ex=681807e2&is=6816b662&hm=2ac27e3db96d10517b543d547dcd588137aaf3b93534285ae84805cf8bb22f03&=&format=webp&width=842&height=826",
-                "https://media.discordapp.net/attachments/1368383731731009636/1369011421186363422/9mo488.png?ex=681a4ebd&is=6818fd3d&hm=3a9d278ba8f436af5ed433f907ce0249ee4b825f4530adafd2f050b4841f4a8e&=&format=webp&quality=lossless",
-                "https://media.discordapp.net/attachments/1368383731731009636/1369012509813641426/facebook_1746458761888_7325178970824882627.png?ex=681a4fc1&is=6818fe41&hm=c7397e3026deac2ba53197bf36da2c7c780f2b258584cb970e6b96d6a4a34e8f&=&format=webp&quality=lossless",
-                "https://media.discordapp.net/attachments/1368383731731009636/1369045626582601728/ZTc1OTIw.png?ex=681a6e99&is=68191d19&hm=a7f7b8f28477bba1222223f792af9bd62060a727e4b5921d746290645ccb4984&=&format=webp&quality=lossless",
-                "https://media.discordapp.net/attachments/1368383731731009636/1373467789464961124/GrJ-_ZUWUAAF7TS.png?ex=682a850e&is=6829338e&hm=440d622438bd6c72dc8862334365419fa0324a4738c27a7a2e6152be54a4c655&=&format=webp&quality=lossless",
-                "https://media.discordapp.net/attachments/1368383731731009636/1373467828975566868/GrKLckuW8AAthAK.png?ex=682a8518&is=68293398&hm=b946ea9a7d7cd3cdd9238911db5fcefa37f0d4005edd261d5d3bba10c367fa5e&=&format=webp&quality=lossless",
-                "https://media.discordapp.net/attachments/1368383731731009636/1373467879122407474/GrKXXbJWAAAJwzj.png?ex=682a8524&is=682933a4&hm=4a471afe607eca54b139e034d245bc1169b5c087a02bb10bb11f631dbb6771ea&=&format=webp&quality=lossless",
-                "https://media.discordapp.net/attachments/1368383731731009636/1373467953260925080/498281336_4066399776977681_3756171527715474276_n.png?ex=682a8535&is=682933b5&hm=754e803e5a84ae0aac431d57feab04904e8af347176978ecb53d116b18afcca7&=&format=webp&quality=lossless&width=1012&height=826",
             ]
             await message.channel.send(random.choice(imagenes_balatro))
             return
-        if content.startswith("argentino" or "Argentino"):
+
+        if content.lower().startswith("argentino"):
             imagen_argentino = [
                 "https://media.discordapp.net/attachments/1368383731731009636/1394860064480821248/image.png?ex=6878582a&is=687706aa&hm=672270cd443e065d4e72a59689268826a3515bb3dd257b24e3fe1fdab277eaa6&=&format=webp&quality=lossless&width=833&height=826"
             ]
@@ -133,6 +251,9 @@ class GorkClient(discord.Client):
                 await channel.send(random.choice(mensajes_random))
 
 
+# ==========================
+# Slash commands
+# ==========================
 @discord.app_commands.command(name="ping", description="Responde con Pong!")
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message("Pong!", ephemeral=True)
@@ -142,5 +263,9 @@ async def coinflip(interaction: discord.Interaction):
     resultado = random.choice(["Cara", "Cruz"])
     await interaction.response.send_message(f"🪙 ¡Salió **{resultado}**!")
 
+
+# ==========================
+# Ejecución
+# ==========================
 client = GorkClient(intents=intents)
 client.run(os.getenv("DISCORD_TOKEN"))
