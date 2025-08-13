@@ -137,31 +137,54 @@ class GorkClient(discord.Client):
                 await message.channel.send("Hubo un error en la búsqueda.")
             return
 
-        # ==========================
+                # ==========================
         # Comando chistoso "teto porno"
         # ==========================
         if content == "teto porno" and isinstance(message.channel, discord.TextChannel) and message.channel.is_nsfw():
             try:
-                results = r34.search(["kasane_teto", "-ai_generated", "-ai", "-ai_art"], page_id=1, limit=100)
+                tags = ["kasane_teto", "-ai_generated", "-ai", "-ai_art"]
+
+                # Obtener el número total de resultados
+                total_results = r34.count(tags)
+
+                if total_results == 0:
+                    await message.channel.send("No encontré nada de Teto.")
+                    return
+
+                total_pages = (total_results // 100) + 1
+
+                # Intentar varias páginas aleatorias hasta encontrar resultados
+                attempts = 0
+                results = None
+                while attempts < 5:  # Hasta 5 intentos
+                    random_page = random.randint(1, total_pages)
+                    results = r34.search(tags, page_id=random_page, limit=100)
+                    if results:
+                        break
+                    attempts += 1
+
                 if results:
                     post = random.choice(results)
-                    # Intentar obtener url correcta (igual que antes)
+
                     def get_image_url(post):
                         for attr in ["fileUrl", "file_url", "sample_url", "image", "preview_url"]:
                             url = getattr(post, attr, None)
                             if url:
                                 return url
                         return None
+
                     image_url = get_image_url(post)
                     if image_url:
                         await message.channel.send(image_url)
                     else:
                         await message.channel.send("No se encontró imagen disponible.")
                 else:
-                    await message.channel.send("No encontré nada de Teto.")
+                    await message.channel.send("No encontré nada de Teto después de varios intentos.")
+
             except Exception as e:
                 print(f"Error al buscar en rule34: {e}")
             return
+
 
         # ==========================
         # Respuestas de texto simples
