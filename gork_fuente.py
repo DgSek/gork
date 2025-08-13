@@ -3,6 +3,7 @@ import random
 import asyncio
 import re
 import os
+import aiohttp
 from dotenv import load_dotenv
 from rule34Py import rule34Py  # Librería para acceder a rule34
 
@@ -13,6 +14,20 @@ intents.message_content = True
 
 # Cliente de Rule34
 r34 = rule34Py()
+
+# ==========================
+# Función auxiliar para obtener total de resultados desde la API de Rule34
+# ==========================
+async def get_total_results(tags):
+    url = f"https://rule34.xxx/index.php?page=dapi&s=post&q=index&tags={'+'.join(tags)}&limit=1"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            text = await resp.text()
+            match = re.search(r'count="(\d+)"', text)
+            if match:
+                return int(match.group(1))
+    return 0
+
 
 # ==========================
 # Cliente del bot
@@ -125,8 +140,6 @@ class GorkClient(discord.Client):
 
                     @discord.ui.button(label="❌", style=discord.ButtonStyle.danger)
                     async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
-                        # Solo permitir que el autor del mensaje o el que invocó el comando cierre el mensaje:
-                        # Como esta info no la tenemos, permitiremos que cualquiera borre el mensaje (puedes cambiar esto)
                         await interaction.message.delete()
 
                 view = R34View(results)
@@ -137,15 +150,15 @@ class GorkClient(discord.Client):
                 await message.channel.send("Hubo un error en la búsqueda.")
             return
 
-                # ==========================
+        # ==========================
         # Comando chistoso "teto porno"
         # ==========================
         if content == "teto porno" and isinstance(message.channel, discord.TextChannel) and message.channel.is_nsfw():
             try:
                 tags = ["kasane_teto", "-ai_generated", "-ai", "-ai_art"]
 
-                # Obtener el número total de resultados
-                total_results = r34.count(tags)
+                # Nuevo método para obtener el total de resultados
+                total_results = await get_total_results(tags)
 
                 if total_results == 0:
                     await message.channel.send("No encontré nada de Teto.")
@@ -184,7 +197,6 @@ class GorkClient(discord.Client):
             except Exception as e:
                 print(f"Error al buscar en rule34: {e}")
             return
-
 
         # ==========================
         # Respuestas de texto simples
