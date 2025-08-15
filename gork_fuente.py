@@ -197,6 +197,102 @@ class GorkClient(discord.Client):
             except Exception as e:
                 print(f"Error al buscar en rule34: {e}")
             return
+        
+        # ==========================
+        # Comando chistoso "neru porno"
+        # ==========================
+        if content == "neru porno" and isinstance(message.channel, discord.TextChannel) and message.channel.is_nsfw():
+            try:
+                tags = ["akita_neru", "-ai_generated", "-ai", "-ai_art"]
+
+                # Nuevo método para obtener el total de resultados
+                total_results = await get_total_results(tags)
+
+                if total_results == 0:
+                    await message.channel.send("No encontré nada de Neru.")
+                    return
+
+                total_pages = (total_results // 100) + 1
+
+                # Intentar varias páginas aleatorias hasta encontrar resultados
+                attempts = 0
+                results = None
+                while attempts < 5:  # Hasta 5 intentos
+                    random_page = random.randint(1, total_pages)
+                    results = r34.search(tags, page_id=random_page, limit=100)
+                    if results:
+                        break
+                    attempts += 1
+
+                if results:
+                    post = random.choice(results)
+
+                    def get_image_url(post):
+                        for attr in ["fileUrl", "file_url", "sample_url", "image", "preview_url"]:
+                            url = getattr(post, attr, None)
+                            if url:
+                                return url
+                        return None
+
+                    image_url = get_image_url(post)
+                    if image_url:
+                        await message.channel.send(image_url)
+                    else:
+                        await message.channel.send("No se encontró imagen disponible.")
+                else:
+                    await message.channel.send("No encontré nada de Neru después de varios intentos.")
+
+            except Exception as e:
+                print(f"Error al buscar en rule34: {e}")
+            return
+        
+        # ==========================
+        # Comando chistoso "miku porno"
+        # ==========================
+        if content == "miku porno" and isinstance(message.channel, discord.TextChannel) and message.channel.is_nsfw():
+            try:
+                tags = ["hatsune_miku", "-ai_generated", "-ai", "-ai_art"]
+
+                # Nuevo método para obtener el total de resultados
+                total_results = await get_total_results(tags)
+
+                if total_results == 0:
+                    await message.channel.send("No encontré nada de Miku.")
+                    return
+
+                total_pages = (total_results // 100) + 1
+
+                # Intentar varias páginas aleatorias hasta encontrar resultados
+                attempts = 0
+                results = None
+                while attempts < 5:  # Hasta 5 intentos
+                    random_page = random.randint(1, total_pages)
+                    results = r34.search(tags, page_id=random_page, limit=100)
+                    if results:
+                        break
+                    attempts += 1
+
+                if results:
+                    post = random.choice(results)
+
+                    def get_image_url(post):
+                        for attr in ["fileUrl", "file_url", "sample_url", "image", "preview_url"]:
+                            url = getattr(post, attr, None)
+                            if url:
+                                return url
+                        return None
+
+                    image_url = get_image_url(post)
+                    if image_url:
+                        await message.channel.send(image_url)
+                    else:
+                        await message.channel.send("No se encontró imagen disponible.")
+                else:
+                    await message.channel.send("No encontré nada de Miku después de varios intentos.")
+
+            except Exception as e:
+                print(f"Error al buscar en rule34: {e}")
+            return
 
         # ==========================
         # Respuestas de texto simples
