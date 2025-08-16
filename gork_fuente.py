@@ -16,6 +16,11 @@ intents.message_content = True
 r34 = rule34Py()
 
 # ==========================
+# Lista negra de usuarios (NO pueden usar comandos de texto)
+# ==========================
+BLACKLIST = {852636435677052978, 556991628544311322}
+
+# ==========================
 # Función auxiliar para obtener total de resultados desde la API de Rule34
 # ==========================
 async def get_total_results(tags):
@@ -52,6 +57,21 @@ class GorkClient(discord.Client):
 
         content = message.content.strip().lower()
 
+        # 🚫 Bloqueo SOLO para comandos de texto
+        if message.author.id in BLACKLIST:
+            if (
+                content.startswith("¿r34") or
+                content in ["teto porno", "neru porno", "miku porno", "owo", "uwu"] or
+                content.startswith("pls penis") or
+                re.fullmatch(r"(q(u|ú)(e|é)+|pq|q+)", content, re.IGNORECASE) or
+                re.search(r"(q(u|ú)(e|é)+)\s*[\?\¿]?$", content, re.IGNORECASE) or
+                re.fullmatch(r"k(h)?(e|é)?", content, re.IGNORECASE) or
+                "balatro" in content or
+                content.startswith("argentino")
+            ):
+                await message.channel.send("No le hago caso a culones")
+                return
+
         # ==========================
         # Comando ¿r34 <busqueda> (hasta 100 imágenes)
         # ==========================
@@ -75,7 +95,6 @@ class GorkClient(discord.Client):
                     await message.channel.send("No encontré resultados.")
                     return
 
-                # Función para obtener URL de la imagen
                 def get_image_url(post):
                     for attr in ["fileUrl", "file_url", "sample_url", "image", "preview_url"]:
                         url = getattr(post, attr, None)
@@ -83,7 +102,6 @@ class GorkClient(discord.Client):
                             return url
                     return None
 
-                # Función para obtener URL del post
                 def get_post_url(post):
                     for attr in ["url", "post_url", "postUrl", "source"]:
                         url = getattr(post, attr, None)
@@ -91,9 +109,6 @@ class GorkClient(discord.Client):
                             return url
                     return None
 
-                # ==========================
-                # Vista con botones para carrusel de imágenes
-                # ==========================
                 class R34View(discord.ui.View):
                     def __init__(self, posts):
                         super().__init__(timeout=300)  # Expira en 5 minutos
@@ -157,7 +172,6 @@ class GorkClient(discord.Client):
             try:
                 tags = ["kasane_teto", "-ai_generated", "-ai", "-ai_art"]
 
-                # Nuevo método para obtener el total de resultados
                 total_results = await get_total_results(tags)
 
                 if total_results == 0:
@@ -166,10 +180,9 @@ class GorkClient(discord.Client):
 
                 total_pages = (total_results // 100) + 1
 
-                # Intentar varias páginas aleatorias hasta encontrar resultados
                 attempts = 0
                 results = None
-                while attempts < 5:  # Hasta 5 intentos
+                while attempts < 5:
                     random_page = random.randint(1, total_pages)
                     results = r34.search(tags, page_id=random_page, limit=100)
                     if results:
@@ -205,7 +218,6 @@ class GorkClient(discord.Client):
             try:
                 tags = ["akita_neru", "-ai_generated", "-ai", "-ai_art"]
 
-                # Nuevo método para obtener el total de resultados
                 total_results = await get_total_results(tags)
 
                 if total_results == 0:
@@ -214,10 +226,9 @@ class GorkClient(discord.Client):
 
                 total_pages = (total_results // 100) + 1
 
-                # Intentar varias páginas aleatorias hasta encontrar resultados
                 attempts = 0
                 results = None
-                while attempts < 5:  # Hasta 5 intentos
+                while attempts < 5:
                     random_page = random.randint(1, total_pages)
                     results = r34.search(tags, page_id=random_page, limit=100)
                     if results:
@@ -253,7 +264,6 @@ class GorkClient(discord.Client):
             try:
                 tags = ["hatsune_miku", "-ai_generated", "-ai", "-ai_art"]
 
-                # Nuevo método para obtener el total de resultados
                 total_results = await get_total_results(tags)
 
                 if total_results == 0:
@@ -262,10 +272,9 @@ class GorkClient(discord.Client):
 
                 total_pages = (total_results // 100) + 1
 
-                # Intentar varias páginas aleatorias hasta encontrar resultados
                 attempts = 0
                 results = None
-                while attempts < 5:  # Hasta 5 intentos
+                while attempts < 5:
                     random_page = random.randint(1, total_pages)
                     results = r34.search(tags, page_id=random_page, limit=100)
                     if results:
@@ -338,15 +347,15 @@ class GorkClient(discord.Client):
 
         if re.search(r'\bbalatro\b', message.content, re.IGNORECASE):
             imagenes_balatro = [
-                "https://media.discordapp.net/attachments/1368383731731009636/1368383799347511397/20250503_100614.jpg?ex=68180639&is=6816b4b9&hm=cfd18f47d067a49f1294e752ee1258554cc2387cccee28987148695aa87c2871&=&format=webp",
-                "https://media.discordapp.net/attachments/1368383731731009636/1368383817462845560/20250503_100606.jpg?ex=6818063d&is=6816b4bd&hm=6d7473660a1ac5037a5de817a85299def143a6e5a51f8e0159eb84b48da74d40&=&format=webp",
+                "https://media.discordapp.net/attachments/1368383731731009636/1368383799347511397/20250503_100614.jpg",
+                "https://media.discordapp.net/attachments/1368383731731009636/1368383817462845560/20250503_100606.jpg",
             ]
             await message.channel.send(random.choice(imagenes_balatro))
             return
 
         if content.lower().startswith("argentino"):
             imagen_argentino = [
-                "https://media.discordapp.net/attachments/1368383731731009636/1394860064480821248/image.png?ex=6878582a&is=687706aa&hm=672270cd443e065d4e72a59689268826a3515bb3dd257b24e3fe1fdab277eaa6&=&format=webp&quality=lossless&width=833&height=826"
+                "https://media.discordapp.net/attachments/1368383731731009636/1394860064480821248/image.png"
             ]
             await message.channel.send(random.choice(imagen_argentino))
             return
@@ -383,7 +392,7 @@ class GorkClient(discord.Client):
 
 
 # ==========================
-# Slash commands
+# Slash commands (NO bloqueados)
 # ==========================
 @discord.app_commands.command(name="ping", description="Responde con Pong!")
 async def ping(interaction: discord.Interaction):
