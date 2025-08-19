@@ -294,13 +294,17 @@ class GorkClient(discord.Client):
                 print(f"Error al buscar en rule34: {e}")
             return
 
-                # ==========================
+                        # ==========================
         # Respuestas de texto simples
         # ==========================
-        # Detectar "que/k" solos o al final de palabra (con tildes y variaciones)
-        if re.fullmatch(r"(q(u|ú)(e|é)+|k(h)?(e|é)?)[\?\¿\!\.]*", content, re.IGNORECASE) \
-           or re.search(r"(q(u|ú)(e|é)+|k(h)?(e|é)?)\s*[\?\¿\!\.]*$", content, re.IGNORECASE):
+        # Detectar "que" solo o al final de frase (con tildes y variaciones)
+        if re.search(r"(?:^|\s)q(u|ú)(e|é)+\s*[\?\¿\!\.]*$", content, re.IGNORECASE):
             await message.channel.send("so")
+            return
+
+        # Detectar "k" solo o al final de frase (con tildes y variaciones)
+        if re.search(r"(?:^|\s)k(h)?(e|é)?\s*[\?\¿\!\.]*$", content, re.IGNORECASE):
+            await message.channel.send("zo")
             return
 
         # Detectar "kk", "kk?", "kk." etc.
@@ -308,8 +312,6 @@ class GorkClient(discord.Client):
            or re.search(r"k{2,}\s*[\?\¿\!\.]*$", content, re.IGNORECASE):
             await message.channel.send("tragas")
             return
-
-
 
         if content == "owo":
             await message.channel.send("uwu")
