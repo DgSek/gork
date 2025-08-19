@@ -295,17 +295,19 @@ class GorkClient(discord.Client):
             return
 
                         # ==========================
-        # Respuestas de texto simples
+               # ==========================
+        # Respuestas de texto simples (mejoradas)
         # ==========================
-        # Detectar "que" solo o al final de frase (con tildes y variaciones)
-        if re.search(r"(?:^|\s)q(u|ú)(e|é)+\s*[\?\¿\!\.]*$", content, re.IGNORECASE):
+        # Detectar si el mensaje termina en "que", "qué", "q", "queee", etc.
+        if re.search(r"(q(u|ú)?(e|é)+|q)[\?\¿\!\.]*$", content, re.IGNORECASE):
             await message.channel.send("so")
             return
 
-        # Detectar "k" solo o al final de frase (con tildes y variaciones)
-        if re.search(r"(?:^|\s)k(h)?(e|é)?\s*[\?\¿\!\.]*$", content, re.IGNORECASE):
+        # Detectar si el mensaje termina en "k", "ke", "khe", "khé", "keee", etc.
+        if re.search(r"(k(h)?(e|é)+|k)[\?\¿\!\.]*$", content, re.IGNORECASE):
             await message.channel.send("zo")
             return
+
 
         # Detectar "kk", "kk?", "kk." etc.
         if re.fullmatch(r"k{2,}[\?\¿\!\.]*", content, re.IGNORECASE) \
