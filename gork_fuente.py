@@ -294,25 +294,25 @@ class GorkClient(discord.Client):
                 print(f"Error al buscar en rule34: {e}")
             return
 
-                               # ==========================
+        # ==========================
         # Respuestas de texto simples (mejoradas)
         # ==========================
 
-        # Detectar "kk", "kk?", "kk." etc. → ahora se comprueba primero
+        # Detectar "kk", "kk?", "kk." etc. → primero
         if re.fullmatch(r"k{2,}[\?\¿\!\.]*", content, re.IGNORECASE) \
            or re.search(r"k{2,}\s*[\?\¿\!\.]*$", content, re.IGNORECASE):
             await message.channel.send("tragas")
             return
 
-        # Detectar si el mensaje termina en "que", "qué", "què", "q", etc.
-        # Soporta acentos normales e invertidos + cualquier combinación de símbolos/espacios/emojis
-        if re.search(r"(q(u|ú|ù)?(e|é|è)+|q)(\s*\W*)*$", content, re.IGNORECASE):
+        # Detectar si el mensaje termina en "que", "qué", "què", "quė", "q", etc.
+        # Soporta todas las variantes de "e" con tildes/diacríticos + cualquier símbolo final
+        if re.search(r"(q(u|ú|ù)?(e[\u0300-\u036f]*)+|q)(\s*\W*)*$", content, re.IGNORECASE):
             await message.channel.send("so")
             return
 
-        # Detectar si el mensaje termina en "k", "ke", "ké", "kè", "khe", "khé", "khè", etc.
-        # También soporta acentos normales/invertidos y cualquier combinación de símbolos/espacios/emojis
-        if re.search(r"(k(h)?(e|é|è)+|k)(\s*\W*)*$", content, re.IGNORECASE):
+        # Detectar si el mensaje termina en "k", "ke", "ké", "kè", "kė", "khe", "khé", "khè", etc.
+        # Igual: todas las variantes de "e" con diacríticos + cualquier símbolo final
+        if re.search(r"(k(h)?(e[\u0300-\u036f]*)+|k)(\s*\W*)*$", content, re.IGNORECASE):
             await message.channel.send("zo")
             return
 
