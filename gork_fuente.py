@@ -294,7 +294,7 @@ class GorkClient(discord.Client):
                 print(f"Error al buscar en rule34: {e}")
             return
 
-        # ==========================
+               # ==========================
         # Respuestas de texto simples (mejoradas)
         # ==========================
 
@@ -304,18 +304,15 @@ class GorkClient(discord.Client):
             await message.channel.send("tragas")
             return
 
-        # Detectar si el mensaje termina en "que", "qué", "què", "quė", "q", etc.
-        # Soporta todas las variantes de "e" con tildes/diacríticos + cualquier símbolo final
-        if re.search(r"(q(u|ú|ù)?(e[\u0300-\u036f]*)+|q)(\s*\W*)*$", content, re.IGNORECASE):
+        # Detectar si el mensaje termina en "que" y todas sus variantes
+        if re.search(r"(q(u|ú|ù)?(e|é|è|ė|ẽ|ê)+|q)(\s*\W*)*$", content, re.IGNORECASE):
             await message.channel.send("so")
             return
 
-        # Detectar si el mensaje termina en "k", "ke", "ké", "kè", "kė", "khe", "khé", "khè", etc.
-        # Igual: todas las variantes de "e" con diacríticos + cualquier símbolo final
-        if re.search(r"(k(h)?(e[\u0300-\u036f]*)+|k)(\s*\W*)*$", content, re.IGNORECASE):
+        # Detectar si el mensaje termina en "k", "ke", "khe" y todas sus variantes
+        if re.search(r"(k(h)?(e|é|è|ė|ẽ|ê)+|k)(\s*\W*)*$", content, re.IGNORECASE):
             await message.channel.send("zo")
             return
-
 
         if content == "owo":
             await message.channel.send("uwu")
