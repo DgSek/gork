@@ -294,26 +294,28 @@ class GorkClient(discord.Client):
                 print(f"Error al buscar en rule34: {e}")
             return
 
-                        # ==========================
-               # ==========================
+                # ==========================
         # Respuestas de texto simples (mejoradas)
         # ==========================
-        # Detectar si el mensaje termina en "que", "qué", "q", "queee", etc.
-        if re.search(r"(q(u|ú)?(e|é)+|q)[\?\¿\!\.]*$", content, re.IGNORECASE):
-            await message.channel.send("so")
-            return
 
-        # Detectar si el mensaje termina en "k", "ke", "khe", "khé", "keee", etc.
-        if re.search(r"(k(h)?(e|é)+|k)[\?\¿\!\.]*$", content, re.IGNORECASE):
-            await message.channel.send("zo")
-            return
-
-
-        # Detectar "kk", "kk?", "kk." etc.
+        # Detectar "kk", "kk?", "kk." etc. → ahora se comprueba primero
         if re.fullmatch(r"k{2,}[\?\¿\!\.]*", content, re.IGNORECASE) \
            or re.search(r"k{2,}\s*[\?\¿\!\.]*$", content, re.IGNORECASE):
             await message.channel.send("tragas")
             return
+
+        # Detectar si el mensaje termina en "que", "qué", "q", "queee", etc.
+        # Ahora también permite espacio seguido de caracter no alfanumérico
+        if re.search(r"(q(u|ú)?(e|é)+|q)([\?\¿\!\.]|\s[^\w\s])*$", content, re.IGNORECASE):
+            await message.channel.send("so")
+            return
+
+        # Detectar si el mensaje termina en "k", "ke", "khe", "khé", "keee", etc.
+        # Ahora también permite espacio seguido de caracter no alfanumérico
+        if re.search(r"(k(h)?(e|é)+|k)([\?\¿\!\.]|\s[^\w\s])*$", content, re.IGNORECASE):
+            await message.channel.send("zo")
+            return
+
 
         if content == "owo":
             await message.channel.send("uwu")
