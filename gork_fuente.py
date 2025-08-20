@@ -294,7 +294,7 @@ class GorkClient(discord.Client):
                 print(f"Error al buscar en rule34: {e}")
             return
 
-                # ==========================
+                        # ==========================
         # Respuestas de texto simples (mejoradas)
         # ==========================
 
@@ -305,17 +305,16 @@ class GorkClient(discord.Client):
             return
 
         # Detectar si el mensaje termina en "que", "qué", "q", "queee", etc.
-        # Ahora también permite espacio seguido de caracter no alfanumérico
-        if re.search(r"(q(u|ú)?(e|é)+|q)([\?\¿\!\.]|\s[^\w\s])*$", content, re.IGNORECASE):
+        # Ahora también permite espacio(s) y/o caracteres no alfanuméricos al final
+        if re.search(r"(q(u|ú)?(e|é)+|q)(\s*\W*)*$", content, re.IGNORECASE):
             await message.channel.send("so")
             return
 
         # Detectar si el mensaje termina en "k", "ke", "khe", "khé", "keee", etc.
-        # Ahora también permite espacio seguido de caracter no alfanumérico
-        if re.search(r"(k(h)?(e|é)+|k)([\?\¿\!\.]|\s[^\w\s])*$", content, re.IGNORECASE):
+        # Ahora también permite espacio(s) y/o caracteres no alfanuméricos al final
+        if re.search(r"(k(h)?(e|é)+|k)(\s*\W*)*$", content, re.IGNORECASE):
             await message.channel.send("zo")
             return
-
 
         if content == "owo":
             await message.channel.send("uwu")
