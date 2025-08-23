@@ -4,22 +4,32 @@ import asyncio
 import re
 import os
 import aiohttp
+import xml.etree.ElementTree as ET
 from dotenv import load_dotenv
-from rule34Py import rule34Py  # Librería para acceder a rule34
 
 load_dotenv()
 
 intents = discord.Intents.default()
 intents.message_content = True
 
-# Cliente de Rule34
-r34 = rule34Py()
+# ==========================
+# Tags de bloqueo globales (IA y menores)
+# ==========================
+BLOCKED_TAGS = [
+    "-ai_generated", "-ai", "-ai_art",
+    "-loli", "-shota", "-young", "-teen", "-child", "-underage", "-kid", "-baby", "-toddler"
+]
 
 # ==========================
-# Función auxiliar para obtener total de resultados desde la API de Rule34
+# Funciones auxiliares para usar API de rule34
 # ==========================
 async def get_total_results(tags):
-    url = f"https://rule34.xxx/index.php?page=dapi&s=post&q=index&tags={'+'.join(tags)}&limit=1"
+    """
+    Devuelve el total de resultados para los tags dados (usa API XML).
+    """
+    # Combinar con bloqueos globales si no están ya
+    all_tags = list(tags) + [t for t in BLOCKED_TAGS if t not in tags]
+    url = f"https://rule34.xxx/index.php?page=dapi&s=post&q=index&tags={'+'.join(all_tags)}&limit=1"
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resp:
             text = await resp.text()
@@ -27,6 +37,53 @@ async def get_total_results(tags):
             if match:
                 return int(match.group(1))
     return 0
+
+
+async def fetch_results(tags, page, limit=100):
+    """
+    Descarga resultados de rule34.xxx en XML y los convierte en dicts.
+    page (pid) es 0-based.
+    """
+    all_tags = list(tags) + [t for t in BLOCKED_TAGS if t not in tags]
+    url = f"https://rule34.xxx/index.php?page=dapi&s=post&q=index&tags={'+'.join(all_tags)}&pid={page}&limit={limit}"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            text = await resp.text()
+            # Si el XML viniera vacío o mal, evitamos crash
+            try:
+                root = ET.fromstring(text)
+            except ET.ParseError:
+                return []
+            posts = []
+            for post in root.findall("post"):
+                posts.append({
+                    "id": post.attrib.get("id"),
+                    "file_url": post.attrib.get("file_url"),
+                    "sample_url": post.attrib.get("sample_url"),
+                    "preview_url": post.attrib.get("preview_url"),
+                    "tags": post.attrib.get("tags", "").split(),
+                })
+            return posts
+
+
+async def get_random_post(tags):
+    """
+    Obtiene un post aleatorio completamente entre todos los resultados disponibles.
+    Intenta hasta 5 páginas aleatorias.
+    """
+    total_results = await get_total_results(tags)
+    if total_results == 0:
+        return None
+
+    # pid es 0-based; 100 items por página
+    total_pages = max(1, (total_results - 1) // 100 + 1)
+
+    for _ in range(5):  # 5 intentos -> 5 páginas aleatorias
+        random_page = random.randint(0, total_pages - 1)
+        results = await fetch_results(tags, random_page, limit=100)
+        if results:
+            return random.choice(results)
+    return None
 
 
 # ==========================
@@ -53,43 +110,38 @@ class GorkClient(discord.Client):
         content = message.content.strip().lower()
 
         # ==========================
-        # Comando ¿r34 <busqueda> (hasta 100 imágenes)
+        # Comando ¿r34 <busqueda>  (carrusel, hasta 100 imgs)
         # ==========================
         if content.startswith("¿r34 "):
             if not isinstance(message.channel, discord.TextChannel) or not message.channel.is_nsfw():
                 return  # Solo funciona en canales NSFW
 
-            query = content.split(" ", 1)[1]
-            tags = query.split() + ["-ai_generated", "-ai", "-ai_art"]
+            query = message.content.strip()[4:]  # conservar mayús/acentos tras "¿r34 "
+            # Construir tags desde la query y sumar bloqueos
+            # (no toco la query del usuario; solo añado bloqueos globales)
+            base_tags = query.split()
+            tags = base_tags  # los bloqueos se agregan dentro de fetch/get_total
 
             try:
-                # Buscar hasta 100 imágenes (5 páginas de 20)
+                # Buscar hasta 100 imágenes (5 páginas de 20) — mismo comportamiento que tenías
                 results = []
-                for page in range(1, 6):
-                    page_results = r34.search(tags, page_id=page, limit=20)
+                for page in range(0, 5):  # pid 0..4
+                    page_results = await fetch_results(tags, page, limit=20)
                     if not page_results:
-                        break
+                        # si una página vacía aparece, seguimos intentando las demás
+                        continue
                     results.extend(page_results)
 
                 if not results:
                     await message.channel.send("No encontré resultados.")
                     return
 
-                # Función para obtener URL de la imagen
+                # Helpers para el carrusel
                 def get_image_url(post):
-                    for attr in ["fileUrl", "file_url", "sample_url", "image", "preview_url"]:
-                        url = getattr(post, attr, None)
-                        if url:
-                            return url
-                    return None
+                    return post.get("file_url") or post.get("sample_url") or post.get("preview_url")
 
-                # Función para obtener URL del post
                 def get_post_url(post):
-                    for attr in ["url", "post_url", "postUrl", "source"]:
-                        url = getattr(post, attr, None)
-                        if url:
-                            return url
-                    return None
+                    return f"https://rule34.xxx/index.php?page=post&s=view&id={post.get('id')}"
 
                 # ==========================
                 # Vista con botones para carrusel de imágenes
@@ -103,18 +155,19 @@ class GorkClient(discord.Client):
                     def current_embed(self):
                         post = self.posts[self.index]
                         image_url = get_image_url(post)
-                        post_url = get_post_url(post) or "https://rule34.xxx/"
+                        post_url = get_post_url(post)
 
+                        # acotar lista de tags para no saturar
+                        shown_tags = post['tags'][:10]
                         embed = discord.Embed(
                             title=f"Resultado {self.index + 1}/{len(self.posts)}",
                             url=post_url,
-                            description=f"**Tags:** {', '.join(post.tags[:10])}..."
+                            description=f"**Tags:** {', '.join(shown_tags)}" + ("..." if len(post['tags']) > 10 else "")
                         )
                         if image_url:
                             embed.set_image(url=image_url)
                         else:
                             embed.description += "\n(No se encontró imagen disponible)"
-
                         return embed
 
                     async def update_message(self, interaction: discord.Interaction):
@@ -151,153 +204,38 @@ class GorkClient(discord.Client):
             return
 
         # ==========================
-        # Comando chistoso "teto porno"
+        # Comandos chistosos 100% aleatorios en toda la base
         # ==========================
+        async def handle_chistoso(tags, personaje, mensaje_error):
+            try:
+                post = await get_random_post(tags)
+                if not post:
+                    await message.channel.send(mensaje_error)
+                    return
+                image_url = post.get("file_url") or post.get("sample_url") or post.get("preview_url")
+                if image_url:
+                    await message.channel.send(image_url)
+                else:
+                    await message.channel.send("No se encontró imagen disponible.")
+            except Exception as e:
+                print(f"Error al buscar en rule34: {e}")
+                await message.channel.send(mensaje_error)
+
         if content == "teto porno" and isinstance(message.channel, discord.TextChannel) and message.channel.is_nsfw():
-            try:
-                tags = ["kasane_teto", "-ai_generated", "-ai", "-ai_art"]
-
-                # Nuevo método para obtener el total de resultados
-                total_results = await get_total_results(tags)
-
-                if total_results == 0:
-                    await message.channel.send("No encontré nada de Teto.")
-                    return
-
-                total_pages = (total_results // 100) + 1
-
-                # Intentar varias páginas aleatorias hasta encontrar resultados
-                attempts = 0
-                results = None
-                while attempts < 5:  # Hasta 5 intentos
-                    random_page = random.randint(1, total_pages)
-                    results = r34.search(tags, page_id=random_page, limit=100)
-                    if results:
-                        break
-                    attempts += 1
-
-                if results:
-                    post = random.choice(results)
-
-                    def get_image_url(post):
-                        for attr in ["fileUrl", "file_url", "sample_url", "image", "preview_url"]:
-                            url = getattr(post, attr, None)
-                            if url:
-                                return url
-                        return None
-
-                    image_url = get_image_url(post)
-                    if image_url:
-                        await message.channel.send(image_url)
-                    else:
-                        await message.channel.send("No se encontró imagen disponible.")
-                else:
-                    await message.channel.send("No encontré nada de Teto después de varios intentos.")
-
-            except Exception as e:
-                print(f"Error al buscar en rule34: {e}")
+            await handle_chistoso(["kasane_teto"], "Teto", "No encontré nada de Teto después de varios intentos.")
             return
-        
-        # ==========================
-        # Comando chistoso "neru porno"
-        # ==========================
+
         if content == "neru porno" and isinstance(message.channel, discord.TextChannel) and message.channel.is_nsfw():
-            try:
-                tags = ["akita_neru", "-ai_generated", "-ai", "-ai_art"]
-
-                # Nuevo método para obtener el total de resultados
-                total_results = await get_total_results(tags)
-
-                if total_results == 0:
-                    await message.channel.send("No encontré nada de Neru.")
-                    return
-
-                total_pages = (total_results // 100) + 1
-
-                # Intentar varias páginas aleatorias hasta encontrar resultados
-                attempts = 0
-                results = None
-                while attempts < 5:  # Hasta 5 intentos
-                    random_page = random.randint(1, total_pages)
-                    results = r34.search(tags, page_id=random_page, limit=100)
-                    if results:
-                        break
-                    attempts += 1
-
-                if results:
-                    post = random.choice(results)
-
-                    def get_image_url(post):
-                        for attr in ["fileUrl", "file_url", "sample_url", "image", "preview_url"]:
-                            url = getattr(post, attr, None)
-                            if url:
-                                return url
-                        return None
-
-                    image_url = get_image_url(post)
-                    if image_url:
-                        await message.channel.send(image_url)
-                    else:
-                        await message.channel.send("No se encontró imagen disponible.")
-                else:
-                    await message.channel.send("No encontré nada de Neru después de varios intentos.")
-
-            except Exception as e:
-                print(f"Error al buscar en rule34: {e}")
+            await handle_chistoso(["akita_neru"], "Neru", "No encontré nada de Neru después de varios intentos.")
             return
-        
-        # ==========================
-        # Comando chistoso "miku porno"
-        # ==========================
+
         if content == "miku porno" and isinstance(message.channel, discord.TextChannel) and message.channel.is_nsfw():
-            try:
-                tags = ["hatsune_miku", "-ai_generated", "-ai", "-ai_art"]
-
-                # Nuevo método para obtener el total de resultados
-                total_results = await get_total_results(tags)
-
-                if total_results == 0:
-                    await message.channel.send("No encontré nada de Miku.")
-                    return
-
-                total_pages = (total_results // 100) + 1
-
-                # Intentar varias páginas aleatorias hasta encontrar resultados
-                attempts = 0
-                results = None
-                while attempts < 5:  # Hasta 5 intentos
-                    random_page = random.randint(1, total_pages)
-                    results = r34.search(tags, page_id=random_page, limit=100)
-                    if results:
-                        break
-                    attempts += 1
-
-                if results:
-                    post = random.choice(results)
-
-                    def get_image_url(post):
-                        for attr in ["fileUrl", "file_url", "sample_url", "image", "preview_url"]:
-                            url = getattr(post, attr, None)
-                            if url:
-                                return url
-                        return None
-
-                    image_url = get_image_url(post)
-                    if image_url:
-                        await message.channel.send(image_url)
-                    else:
-                        await message.channel.send("No se encontró imagen disponible.")
-                else:
-                    await message.channel.send("No encontré nada de Miku después de varios intentos.")
-
-            except Exception as e:
-                print(f"Error al buscar en rule34: {e}")
+            await handle_chistoso(["hatsune_miku"], "Miku", "No encontré nada de Miku después de varios intentos.")
             return
 
-               # ==========================
+        # ==========================
         # Respuestas de texto simples (mejoradas)
         # ==========================
-
         # Detectar "kk", "kk?", "kk." etc. → primero
         if re.fullmatch(r"k{2,}[\?\¿\!\.]*", content, re.IGNORECASE) \
            or re.search(r"k{2,}\s*[\?\¿\!\.]*$", content, re.IGNORECASE):
