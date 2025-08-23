@@ -5,63 +5,74 @@ import re
 import os
 import aiohttp
 from dotenv import load_dotenv
-from rule34Py import rule34Py  # Librería para acceder a rule34
 
 load_dotenv()
 
 intents = discord.Intents.default()
 intents.message_content = True
 
-# Cliente de Rule34
-r34 = rule34Py()
+API_URL = "https://rule34.xxx/index.php?page=dapi&s=post&q=index"
 
 # ==========================
-# Función auxiliar para obtener total de resultados desde la API de Rule34
+# Funciones API Rule34
 # ==========================
-async def get_total_results(tags):
-    url = f"https://rule34.xxx/index.php?page=dapi&s=post&q=index&tags={'+'.join(tags)}&limit=1"
+async def fetch_posts(tags, page=0, limit=100):
+    """Descarga posts de Rule34 con los tags dados"""
+    url = f"{API_URL}&tags={'+'.join(tags)}&pid={page}&limit={limit}"
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resp:
             text = await resp.text()
-            match = re.search(r'count="(\d+)"', text)
-            if match:
-                return int(match.group(1))
-    return 0
 
-# ==========================
-# Función para obtener un post aleatorio con fallback de filtros
-# ==========================
+    posts = re.findall(r'<post (.+?)/>', text)
+    parsed = []
+    for post in posts:
+        file_url = re.search(r'file_url="([^"]+)"', post)
+        preview_url = re.search(r'preview_url="([^"]+)"', post)
+        tags_match = re.search(r'tags="([^"]+)"', post)
+        id_match = re.search(r'id="(\d+)"', post)
+
+        parsed.append({
+            "id": id_match.group(1) if id_match else None,
+            "file_url": file_url.group(1) if file_url else None,
+            "preview_url": preview_url.group(1) if preview_url else None,
+            "tags": (tags_match.group(1).split() if tags_match else []),
+        })
+    return parsed
+
+async def get_total_results(tags):
+    """Obtiene el número total de resultados disponibles para los tags"""
+    url = f"{API_URL}&tags={'+'.join(tags)}&limit=1"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            text = await resp.text()
+    match = re.search(r'count="(\d+)"', text)
+    return int(match.group(1)) if match else 0
+
 async def get_random_post(base_tags):
+    """Devuelve un post aleatorio, con fallback si los filtros de IA eliminan todo"""
+    safe_filters = ["-loli", "-shota", "-child", "-young", "-infant"]
     ai_filters = ["-ai_generated", "-ai", "-ai_art"]
 
-    # 1. Intentar con filtros IA
-    tags = base_tags + ai_filters
-    total_results = await get_total_results(tags)
+    # Primero intentar con IA filtrada
+    tags = base_tags + safe_filters + ai_filters
+    total = await get_total_results(tags)
 
-    if total_results == 0:
-        # 2. Si no hay nada, intentar sin filtros IA
-        tags = base_tags
-        total_results = await get_total_results(tags)
+    if total == 0:
+        # Si no hay nada, probar sin filtros IA
+        tags = base_tags + safe_filters
+        total = await get_total_results(tags)
 
-    if total_results == 0:
-        return None  # No hay nada
+    if total == 0:
+        return None
 
-    total_pages = (total_results // 100) + 1
+    total_pages = max(1, (total - 1) // 100 + 1)
 
-    # Intentar varias páginas aleatorias
-    for _ in range(5):
-        random_page = random.randint(1, total_pages)
-        results = r34.search(tags, page_id=random_page, limit=100)
-        if results:
-            return random.choice(results)
+    for _ in range(5):  # Hasta 5 intentos
+        random_page = random.randint(0, total_pages - 1)
+        posts = await fetch_posts(tags, page=random_page, limit=100)
+        if posts:
+            return random.choice(posts)
 
-    return None
-
-def get_image_url(post):
-    for attr in ["fileUrl", "file_url", "sample_url", "image", "preview_url"]:
-        url = getattr(post, attr, None)
-        if url:
-            return url
     return None
 
 # ==========================
@@ -92,16 +103,16 @@ class GorkClient(discord.Client):
         # ==========================
         if content.startswith("¿r34 "):
             if not isinstance(message.channel, discord.TextChannel) or not message.channel.is_nsfw():
-                return  # Solo funciona en canales NSFW
+                return
 
             query = content.split(" ", 1)[1]
             tags = query.split() + ["-loli", "-shota", "-child", "-young", "-infant"]
 
             try:
-                # Buscar hasta 100 imágenes
                 results = []
-                for page in range(1, 6):
-                    page_results = r34.search(tags, page_id=page, limit=20)
+                # buscar hasta 5 páginas
+                for page in range(0, 5):
+                    page_results = await fetch_posts(tags, page=page, limit=20)
                     if not page_results:
                         break
                     results.extend(page_results)
@@ -109,13 +120,6 @@ class GorkClient(discord.Client):
                 if not results:
                     await message.channel.send("No encontré resultados.")
                     return
-
-                def get_post_url(post):
-                    for attr in ["url", "post_url", "postUrl", "source"]:
-                        url = getattr(post, attr, None)
-                        if url:
-                            return url
-                    return None
 
                 class R34View(discord.ui.View):
                     def __init__(self, posts):
@@ -125,13 +129,13 @@ class GorkClient(discord.Client):
 
                     def current_embed(self):
                         post = self.posts[self.index]
-                        image_url = get_image_url(post)
-                        post_url = get_post_url(post) or "https://rule34.xxx/"
+                        image_url = post["file_url"]
+                        post_url = f"https://rule34.xxx/index.php?page=post&s=view&id={post['id']}"
 
                         embed = discord.Embed(
                             title=f"Resultado {self.index + 1}/{len(self.posts)}",
                             url=post_url,
-                            description=f"**Tags:** {', '.join(post.tags[:10])}..."
+                            description=f"**Tags:** {', '.join(post['tags'][:10])}..."
                         )
                         if image_url:
                             embed.set_image(url=image_url)
@@ -177,34 +181,22 @@ class GorkClient(discord.Client):
         # ==========================
         if content == "teto porno" and message.channel.is_nsfw():
             post = await get_random_post(["kasane_teto"])
-            if post:
-                image_url = get_image_url(post)
-                if image_url:
-                    await message.channel.send(image_url)
-                else:
-                    await message.channel.send("No se encontró imagen disponible.")
+            if post and post["file_url"]:
+                await message.channel.send(post["file_url"])
             else:
                 await message.channel.send("No encontré nada de Teto.")
 
         if content == "neru porno" and message.channel.is_nsfw():
             post = await get_random_post(["akita_neru"])
-            if post:
-                image_url = get_image_url(post)
-                if image_url:
-                    await message.channel.send(image_url)
-                else:
-                    await message.channel.send("No se encontró imagen disponible.")
+            if post and post["file_url"]:
+                await message.channel.send(post["file_url"])
             else:
                 await message.channel.send("No encontré nada de Neru.")
 
         if content == "miku porno" and message.channel.is_nsfw():
             post = await get_random_post(["hatsune_miku"])
-            if post:
-                image_url = get_image_url(post)
-                if image_url:
-                    await message.channel.send(image_url)
-                else:
-                    await message.channel.send("No se encontró imagen disponible.")
+            if post and post["file_url"]:
+                await message.channel.send(post["file_url"])
             else:
                 await message.channel.send("No encontré nada de Miku.")
 
