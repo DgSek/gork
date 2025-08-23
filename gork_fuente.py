@@ -72,18 +72,21 @@ async def get_random_post(tags):
     Intenta hasta 5 páginas aleatorias.
     """
     total_results = await get_total_results(tags)
+    print(f"[DEBUG] Resultados para {tags}: {total_results}")  # 👈 DEBUG
+
     if total_results == 0:
         return None
 
-    # pid es 0-based; 100 items por página
     total_pages = max(1, (total_results - 1) // 100 + 1)
 
-    for _ in range(5):  # 5 intentos -> 5 páginas aleatorias
+    for _ in range(5):
         random_page = random.randint(0, total_pages - 1)
+        print(f"[DEBUG] Intentando página {random_page}/{total_pages-1}")  # 👈 DEBUG
         results = await fetch_results(tags, random_page, limit=100)
         if results:
             return random.choice(results)
     return None
+
 
 
 # ==========================
