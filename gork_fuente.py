@@ -35,12 +35,13 @@ class GorkClient(discord.Client):
         # ==========================
         # Respuestas de texto simples
         # ==========================
-        if re.fullmatch(r"(q(u|ú)(e|é)+|pq|q+)", content, re.IGNORECASE) \
-            or re.search(r"(q(u|ú)(e|é)+)\s*[\?\¿]?$", content, re.IGNORECASE):
+          # Detectar si el mensaje termina en "que" y todas sus variantes
+        if re.search(r"(q(u|ú|ù)?(e|é|è|ė|ẽ|ê)+|q)(\s*\W*)*$", content, re.IGNORECASE):
             await message.channel.send("so")
             return
 
-        if re.fullmatch(r"k(h)?(e|é)?", content, re.IGNORECASE):
+         # Detectar si el mensaje termina en "k", "ke", "khe" y todas sus variantes
+        if re.search(r"(k(h)?(e|é|è|ė|ẽ|ê)+|k)(\s*\W*)*$", content, re.IGNORECASE):
             await message.channel.send("zo")
             return
 
